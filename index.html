@@ -224,7 +224,7 @@
         <div class="phone-prefix">+91</div>
         <input id="phone-input" type="tel" placeholder="98765 43210" maxlength="10" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
       </div>
-      <div id="recaptcha-container"></div>
+      <div id="recaptcha-container" style="display:none;"></div>
       <button class="primary-btn" id="send-otp-btn" onclick="sendOTP()"><i class="ti ti-send"></i> Send OTP</button>
     </div>
     <div class="login-card" id="login-card-otp" style="display:none;margin-top:0;">
@@ -503,10 +503,9 @@ window.goTo = function(id) {
 function initRecaptcha() {
   if (window.recaptchaVerifier) return;
   window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    size: 'normal',
+    size: 'invisible',
     callback: () => {}
   });
-  window.recaptchaVerifier.render();
 }
 
 window.sendOTP = async function() {
@@ -528,8 +527,10 @@ window.sendOTP = async function() {
     showToast('Could not send OTP. Check your number and try again.');
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-send"></i> Send OTP';
-    window.recaptchaVerifier = null;
-    document.getElementById('recaptcha-container').innerHTML = '';
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
+    }
   }
 };
 
@@ -578,8 +579,10 @@ window.resendOTP = function() {
   const btn = document.getElementById('send-otp-btn');
   btn.disabled = false;
   btn.innerHTML = '<i class="ti ti-send"></i> Send OTP';
-  window.recaptchaVerifier = null;
-  document.getElementById('recaptcha-container').innerHTML = '';
+  if (window.recaptchaVerifier) {
+    window.recaptchaVerifier.clear();
+    window.recaptchaVerifier = null;
+  }
 };
 
 window.signOutUser = async function() {
