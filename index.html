@@ -90,19 +90,23 @@
   .product-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.2;}
   .product-cat{font-size:11px;color:var(--text-3);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;}
   .product-notes{font-size:12px;color:var(--text-2);margin-top:4px;line-height:1.4;}
-  .variants-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
-  .variant-row-shop{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--cream);border-radius:var(--radius-sm);border:1px solid var(--border-light);}
-  .variant-row-shop.oos{opacity:.5;}
-  .variant-name{flex:1;font-size:14px;font-weight:500;color:var(--text);}
-  .variant-price{font-size:14px;font-weight:700;color:var(--green);margin-right:10px;}
-  .oos-label{font-size:11px;color:var(--text-3);font-style:italic;}
-  .qty-control{display:flex;align-items:center;gap:0;border:1.5px solid var(--border);border-radius:var(--radius-xs);overflow:hidden;background:var(--white);}
-  .qty-btn{width:30px;height:30px;border:none;background:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--green);font-weight:700;flex-shrink:0;}
-  .qty-btn:active{background:var(--green-light);}
-  .qty-val{width:28px;text-align:center;font-size:14px;font-weight:600;color:var(--text);}
-  .add-first-btn{width:32px;height:32px;border-radius:var(--radius-xs);background:var(--green);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
-  .add-first-btn i{font-size:18px;color:white;}
-  .add-first-btn:active{opacity:.8;}
+  /* ── VARIANT PILLS ── */
+  .variant-pills-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+  .variant-pill{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:30px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;transition:all .15s;flex-shrink:0;}
+  .variant-pill:active{opacity:.8;}
+  .variant-pill.active{border-color:var(--green);background:var(--green-light);}
+  .variant-pill.oos{opacity:.45;cursor:default;background:var(--cream-dark);}
+  .vp-name{font-size:12px;font-weight:600;color:var(--text);}
+  .variant-pill.active .vp-name{color:var(--green);}
+  .vp-price{font-size:12px;font-weight:700;color:var(--green);margin-right:2px;}
+  .variant-pill.oos .vp-price{color:var(--text-3);}
+  .vp-oos{font-size:10px;color:var(--text-3);font-style:italic;}
+  .vp-add{width:18px;height:18px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;}
+  .vp-add i{font-size:11px;color:white;}
+  .vp-qty{display:flex;align-items:center;gap:0;border:1.5px solid var(--green);border-radius:20px;overflow:hidden;background:var(--white);}
+  .vp-btn{width:24px;height:24px;border:none;background:none;font-size:14px;font-weight:700;color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .vp-btn:active{background:var(--green-light);}
+  .vp-val{min-width:20px;text-align:center;font-size:12px;font-weight:700;color:var(--green);}
 
   /* ── CART FAB ── */
   .cart-fab{position:absolute;bottom:72px;left:16px;right:16px;z-index:200;background:var(--green);color:#fff;border:none;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 4px 20px rgba(45,90,39,0.4);transition:transform .15s;}
@@ -381,7 +385,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, query, orderBy, onSnapshot, serverTimestamp, where
+  getFirestore, collection, doc, addDoc, query, orderBy, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ─────────────────────────────────────────────────────────
@@ -555,11 +559,13 @@ async function loadData() {
     if (document.getElementById('screen-shop').classList.contains('active')) renderShop();
   });
 
-  // Orders — customer's own orders, filtered by their UID
+  // Orders — fetch all orders and filter client-side by UID (avoids composite index requirement)
   const oRef = collection(db, 'users', OWNER_UID, 'orders');
-  const oQ = query(oRef, where('customerId', '==', currentUser.uid), orderBy('createdAt', 'desc'));
+  const oQ = query(oRef, orderBy('createdAt', 'desc'));
   unsubOrders = onSnapshot(oQ, snap => {
-    orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    orders = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(o => o.customerId === currentUser.uid);
     if (document.getElementById('screen-orders').classList.contains('active')) renderOrders();
   });
 }
@@ -667,26 +673,41 @@ window.renderShop = renderShop;
 
 function productCardHTML(p) {
   const variants = p.variants || [];
-  const variantsHTML = variants.map((v,vi) => {
+  const variantsHTML = variants.map((v, vi) => {
     const key = `${p.id}_${vi}`;
     const cartItem = cart[key];
-    const oos = (v.stock !== undefined && v.stock !== '' && Number(v.stock) <= 0);
+    const stock = (v.stock !== undefined && v.stock !== '') ? Number(v.stock) : Infinity;
+    const oos = stock <= 0;
     const qty = cartItem ? cartItem.qty : 0;
-    return `<div class="variant-row-shop${oos?' oos':''}">
-      <span class="variant-name">${v.name||v.label||'Standard'}</span>
-      <span class="variant-price">${fmtRupee(v.price||0)}</span>
-      ${oos
-        ? `<span class="oos-label">Out of stock</span>`
-        : qty > 0
-          ? `<div class="qty-control">
-              <button class="qty-btn" onclick="changeQty('${p.id}',${vi},-1)">−</button>
-              <span class="qty-val">${qty}</span>
-              <button class="qty-btn" onclick="changeQty('${p.id}',${vi},1)">+</button>
-            </div>`
-          : `<button class="add-first-btn" onclick="changeQty('${p.id}',${vi},1)"><i class="ti ti-plus"></i></button>`
-      }
+    const atMax = qty >= stock;
+    const label = v.name || v.label || 'Standard';
+    const price = fmtRupee(v.price || 0);
+
+    if (oos) {
+      return `<div class="variant-pill oos">
+        <span class="vp-name">${label}</span>
+        <span class="vp-price">${price}</span>
+        <span class="vp-oos">OOS</span>
+      </div>`;
+    }
+    if (qty > 0) {
+      return `<div class="variant-pill active">
+        <span class="vp-name">${label}</span>
+        <span class="vp-price">${price}</span>
+        <div class="vp-qty">
+          <button class="vp-btn" onclick="changeQty('${p.id}',${vi},-1)">−</button>
+          <span class="vp-val">${qty}</span>
+          <button class="vp-btn" onclick="changeQty('${p.id}',${vi},1)" ${atMax ? 'disabled style="opacity:.4;"' : ''}>+</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="variant-pill" onclick="changeQty('${p.id}',${vi},1)">
+      <span class="vp-name">${label}</span>
+      <span class="vp-price">${price}</span>
+      <span class="vp-add"><i class="ti ti-plus"></i></span>
     </div>`;
   }).join('');
+
   return `<div class="product-card">
     <div class="product-card-top">
       <div class="product-icon" style="font-size:28px;">${productEmoji(p.category||'Other')}</div>
@@ -696,7 +717,7 @@ function productCardHTML(p) {
         ${p.notes ? `<div class="product-notes">${p.notes}</div>` : ''}
       </div>
     </div>
-    ${variantsHTML ? `<div class="variants-list">${variantsHTML}</div>` : ''}
+    ${variants.length ? `<div class="variant-pills-row">${variantsHTML}</div>` : ''}
   </div>`;
 }
 
@@ -709,10 +730,14 @@ window.changeQty = function(productId, variantIdx, delta) {
   const variant = (product.variants||[])[variantIdx];
   if (!variant) return;
   const key = `${productId}_${variantIdx}`;
+  const stock = (variant.stock !== undefined && variant.stock !== '') ? Number(variant.stock) : Infinity;
   const current = cart[key] ? cart[key].qty : 0;
   const newQty = current + delta;
   if (newQty <= 0) {
     delete cart[key];
+  } else if (newQty > stock) {
+    showToast(`Only ${stock} in stock`);
+    return;
   } else {
     cart[key] = {
       productId, variantIdx,
@@ -723,7 +748,6 @@ window.changeQty = function(productId, variantIdx, delta) {
     };
   }
   updateCartBadge();
-  // Re-render current shop view
   if (document.getElementById('screen-home').classList.contains('active')) renderHome();
   if (document.getElementById('screen-shop').classList.contains('active')) filterAndRenderProducts();
 };
