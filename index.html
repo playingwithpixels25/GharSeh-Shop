@@ -34,25 +34,22 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading-text{font-size:13px;color:var(--text-3);}
 
-  /* ── OTP LOGIN ── */
+  /* ── GOOGLE LOGIN ── */
   #screen-login{align-items:center;justify-content:center;padding:32px 24px;gap:0;background:var(--cream);}
   .login-brand{font-family:var(--font-display);font-size:34px;color:var(--green);font-weight:600;line-height:1;}
   .login-tagline{font-size:10px;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-top:4px;margin-bottom:32px;}
   .login-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border-light);padding:24px;box-shadow:var(--shadow-md);width:100%;}
   .login-card-title{font-family:var(--font-display);font-size:20px;color:var(--green);margin-bottom:4px;}
-  .login-card-sub{font-size:13px;color:var(--text-3);margin-bottom:20px;line-height:1.5;}
-  .phone-input-row{display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--white);margin-bottom:14px;}
-  .phone-prefix{padding:0 12px;height:48px;display:flex;align-items:center;font-size:15px;font-weight:600;color:var(--text-2);background:var(--cream-dark);border-right:1.5px solid var(--border);flex-shrink:0;}
-  .phone-input-row input{flex:1;border:none;padding:0 14px;height:48px;font-family:var(--font);font-size:15px;color:var(--text);background:transparent;outline:none;}
-  .otp-row{display:flex;gap:8px;justify-content:center;margin-bottom:14px;}
-  .otp-digit{width:46px;height:54px;border:1.5px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-size:22px;font-weight:600;color:var(--text);font-family:var(--font);background:var(--white);outline:none;transition:border-color .2s;}
-  .otp-digit:focus{border-color:var(--green);}
-  .otp-hint{font-size:12px;color:var(--text-3);text-align:center;margin-bottom:20px;}
-  .otp-resend{font-size:12px;color:var(--green);text-align:center;cursor:pointer;font-weight:500;margin-bottom:4px;}
+  .login-card-sub{font-size:13px;color:var(--text-3);margin-bottom:24px;line-height:1.5;}
   .primary-btn{width:100%;height:52px;border-radius:var(--radius-sm);background:var(--green);border:none;color:white;font-family:var(--font);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:opacity .15s;}
   .primary-btn:active{opacity:.85;}
   .primary-btn:disabled{opacity:.5;pointer-events:none;}
-  #recaptcha-container{display:flex;justify-content:center;margin-bottom:14px;}
+  .google-btn{width:100%;height:52px;border-radius:var(--radius-sm);background:var(--white);border:1.5px solid var(--border);color:var(--text);font-family:var(--font);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+  .google-btn:hover{border-color:var(--green);background:var(--green-light);}
+  .google-btn:active{opacity:.85;}
+  .google-btn:disabled{opacity:.5;pointer-events:none;}
+  .google-btn svg{flex-shrink:0;}
+  .login-divider{text-align:center;font-size:12px;color:var(--text-3);margin:16px 0;}
 
   /* ── TOPBAR ── */
   .topbar{padding:48px 16px 12px;display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;}
@@ -217,22 +214,19 @@
   <div class="screen" id="screen-login">
     <div class="login-brand">GharsSeh</div>
     <div class="login-tagline">Homemade with Love</div>
-    <div class="login-card" id="login-card-phone">
+    <div class="login-card">
       <div class="login-card-title">Welcome! 🧡</div>
-      <div class="login-card-sub">Enter your phone number to get a one-time code</div>
-      <div class="phone-input-row">
-        <div class="phone-prefix">+91</div>
-        <input id="phone-input" type="tel" placeholder="98765 43210" maxlength="10" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')" />
-      </div>
-      <div id="recaptcha-container" style="display:none;"></div>
-      <button class="primary-btn" id="send-otp-btn" onclick="sendOTP()"><i class="ti ti-send"></i> Send OTP</button>
-    </div>
-    <div class="login-card" id="login-card-otp" style="display:none;margin-top:0;">
-      <div class="login-card-title">Enter OTP</div>
-      <div class="login-card-sub" id="otp-sent-sub">We sent a 6-digit code to your number</div>
-      <div class="otp-row" id="otp-inputs"></div>
-      <div class="otp-resend" onclick="resendOTP()">Resend code</div>
-      <button class="primary-btn" id="verify-otp-btn" onclick="verifyOTP()"><i class="ti ti-check"></i> Verify & Continue</button>
+      <div class="login-card-sub">Sign in to browse fresh homemade pickles &amp; snacks from our kitchen</div>
+      <button class="google-btn" id="google-signin-btn" onclick="signInWithGoogle()">
+        <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="none" d="M0 0h48v48H0z"/>
+        </svg>
+        Continue with Google
+      </button>
     </div>
   </div>
 
@@ -299,8 +293,8 @@
           <input class="form-input" id="co-name" placeholder="Your name" />
         </div>
         <div class="form-group" style="margin-bottom:0;">
-          <div class="form-label"><i class="ti ti-phone"></i> Phone</div>
-          <input class="form-input" id="co-phone" placeholder="Phone number" readonly style="background:var(--cream-dark);color:var(--text-3);" />
+          <div class="form-label"><i class="ti ti-mail"></i> Email</div>
+          <input class="form-input" id="co-phone" placeholder="Email address" readonly style="background:var(--cream-dark);color:var(--text-3);" />
         </div>
       </div>
       <div class="section-card">
@@ -384,7 +378,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, query, orderBy, onSnapshot, serverTimestamp, where
@@ -403,7 +397,7 @@ const firebaseConfig = {
 };
 
 // ⚠️  REPLACE WITH YOUR UID FROM FIREBASE CONSOLE → Authentication → Users
-const OWNER_UID = "YWfZnSywmzVduGwWLL28D9Jw74w1";
+const OWNER_UID = "REPLACE_WITH_YOUR_OWNER_UID";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -419,7 +413,6 @@ let orders = [];
 let unsubProducts = null;
 let unsubOrders = null;
 let screenStack = ['login'];
-let confirmationResult = null;
 let selectedCategory = 'All';
 
 const SCREENS = ['loading','login','home','shop','cart','checkout','confirmed','orders','order-detail'];
@@ -500,88 +493,28 @@ window.goTo = function(id) {
 // ─────────────────────────────────────────────────────────
 // AUTH
 // ─────────────────────────────────────────────────────────
-function initRecaptcha() {
-  if (window.recaptchaVerifier) return;
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    size: 'invisible',
-    callback: () => {}
-  });
-}
+const googleProvider = new GoogleAuthProvider();
 
-window.sendOTP = async function() {
-  const phone = document.getElementById('phone-input').value.trim();
-  if (phone.length !== 10) { showToast('Enter a valid 10-digit number'); return; }
-  const btn = document.getElementById('send-otp-btn');
+window.signInWithGoogle = async function() {
+  const btn = document.getElementById('google-signin-btn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>';
+  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;border-top-color:var(--green);"></div> Signing in…';
   try {
-    initRecaptcha();
-    confirmationResult = await signInWithPhoneNumber(auth, '+91'+phone, window.recaptchaVerifier);
-    // Show OTP card
-    document.getElementById('login-card-phone').style.display = 'none';
-    document.getElementById('login-card-otp').style.display = 'block';
-    document.getElementById('otp-sent-sub').textContent = `We sent a 6-digit code to +91 ${phone}`;
-    buildOTPInputs();
+    await signInWithPopup(auth, googleProvider);
+    // onAuthStateChanged will handle navigation
   } catch(e) {
     console.error(e);
-    showToast('Could not send OTP. Check your number and try again.');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-send"></i> Send OTP';
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
+    if (e.code !== 'auth/popup-closed-by-user') {
+      showToast('Sign in failed. Please try again.');
     }
-  }
-};
-
-function buildOTPInputs() {
-  const row = document.getElementById('otp-inputs');
-  row.innerHTML = '';
-  for (let i=0;i<6;i++) {
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.inputMode = 'numeric'; inp.maxLength = 1;
-    inp.className = 'otp-digit';
-    inp.dataset.idx = i;
-    inp.addEventListener('input', e => {
-      e.target.value = e.target.value.replace(/\D/g,'');
-      if (e.target.value && i < 5) row.children[i+1].focus();
-    });
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !e.target.value && i > 0) row.children[i-1].focus();
-    });
-    row.appendChild(inp);
-  }
-  row.children[0].focus();
-}
-
-function getOTPValue() {
-  return Array.from(document.getElementById('otp-inputs').children).map(i=>i.value).join('');
-}
-
-window.verifyOTP = async function() {
-  const code = getOTPValue();
-  if (code.length !== 6) { showToast('Enter the full 6-digit code'); return; }
-  const btn = document.getElementById('verify-otp-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>';
-  try {
-    await confirmationResult.confirm(code);
-  } catch(e) {
-    showToast('Incorrect code. Please try again.');
     btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-check"></i> Verify & Continue';
-  }
-};
-
-window.resendOTP = function() {
-  document.getElementById('login-card-otp').style.display = 'none';
-  document.getElementById('login-card-phone').style.display = 'block';
-  const btn = document.getElementById('send-otp-btn');
-  btn.disabled = false;
-  btn.innerHTML = '<i class="ti ti-send"></i> Send OTP';
-  if (window.recaptchaVerifier) {
-    window.recaptchaVerifier.clear();
-    window.recaptchaVerifier = null;
+    btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      <path fill="none" d="M0 0h48v48H0z"/>
+    </svg> Continue with Google`;
   }
 };
 
@@ -631,9 +564,9 @@ async function loadData() {
   });
 }
 
-function getCustomerPhone() {
+function getCustomerIdentifier() {
   if (!currentUser) return '';
-  return currentUser.phoneNumber || '';
+  return currentUser.displayName || currentUser.email || '';
 }
 
 // ─────────────────────────────────────────────────────────
@@ -644,11 +577,16 @@ function renderUserChips() {
     const el = document.getElementById(id+'-user-chip');
     if (!el) return;
     if (!currentUser) { el.innerHTML=''; return; }
-    const phone = currentUser.phoneNumber || '';
-    const display = phone ? phone.slice(-4) : '...';
+    const name = currentUser.displayName || currentUser.email || 'User';
+    const initial = name.charAt(0).toUpperCase();
+    const shortName = name.split(' ')[0]; // first name only
+    const photoURL = currentUser.photoURL;
+    const avatarHTML = photoURL
+      ? `<img src="${photoURL}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;" referrerpolicy="no-referrer" />`
+      : `<div class="user-avatar-sm">${initial}</div>`;
     el.innerHTML = `<div class="user-chip" onclick="signOutUser()">
-      <div class="user-avatar-sm">${display[0]||'U'}</div>
-      <span class="user-chip-name">···${display}</span>
+      ${avatarHTML}
+      <span class="user-chip-name">${shortName}</span>
       <i class="ti ti-logout" style="font-size:13px;color:var(--text-3);"></i>
     </div>`;
   });
@@ -855,8 +793,9 @@ window.setFulfillment = function(mode) {
 
 window.goToCheckout = function goToCheckout() {
   if (!cartCount()) { showToast('Your cart is empty'); return; }
-  // Pre-fill phone
-  document.getElementById('co-phone').value = currentUser?.phoneNumber || '';
+  // Pre-fill name and phone from Google profile
+  document.getElementById('co-name').value = currentUser?.displayName || '';
+  document.getElementById('co-phone').value = currentUser?.email || '';
   // Order summary
   const items = Object.values(cart);
   document.getElementById('co-order-summary').innerHTML = items.map(i =>
@@ -888,7 +827,7 @@ window.placeOrder = async function() {
     const subtotal = cartTotal();
     await addDoc(collection(db, 'users', OWNER_UID, 'orders'), {
       customerName: name,
-      customerPhone: phone,
+      customerEmail: phone,
       customerId: currentUser.uid,
       items,
       subtotal,
