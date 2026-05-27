@@ -36,8 +36,7 @@
 
   /* ── GOOGLE LOGIN ── */
   #screen-login{align-items:center;justify-content:center;padding:32px 24px;gap:0;background:var(--cream);}
-  .login-brand{font-family:var(--font-display);font-size:34px;color:var(--green);font-weight:600;line-height:1;}
-  .login-tagline{font-size:10px;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-top:4px;margin-bottom:32px;}
+  .login-tagline{font-size:10px;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-top:4px;margin-bottom:28px;}
   .login-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border-light);padding:24px;box-shadow:var(--shadow-md);width:100%;}
   .login-card-title{font-family:var(--font-display);font-size:20px;color:var(--green);margin-bottom:4px;}
   .login-card-sub{font-size:13px;color:var(--text-3);margin-bottom:24px;line-height:1.5;}
@@ -244,7 +243,15 @@
 
   <!-- LOGIN -->
   <div class="screen" id="screen-login">
-    <div class="login-brand">GharsSeh</div>
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:8px;">
+      <svg id="login-logo-svg" width="110" height="60" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="220" height="110" rx="12" fill="#faf6f1"/>
+        <text x="14" y="68" font-family="'Playfair Display',serif" font-size="62" font-weight="700" fill="#2D5A27" letter-spacing="-2">GHAR</text>
+        <text x="14" y="104" font-family="'Playfair Display',serif" font-size="38" font-weight="600" fill="#E8A020" letter-spacing="6">SEH</text>
+        <circle cx="196" cy="90" r="14" fill="#2D5A27"/>
+        <text x="196" y="96" font-family="sans-serif" font-size="16" fill="white" text-anchor="middle">🌶</text>
+      </svg>
+    </div>
     <div class="login-tagline">Homemade with Love</div>
     <div class="login-card">
       <div class="login-card-title">Welcome! 🧡</div>
@@ -423,7 +430,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, query, orderBy, onSnapshot, serverTimestamp
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, getDoc, query, orderBy, onSnapshot, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ─────────────────────────────────────────────────────────
@@ -968,6 +975,8 @@ window.placeOrder = async function() {
 
   try {
     const items = Object.values(cart).map(i => ({
+      productId: i.productId,
+      variantIdx: i.variantIdx,
       productName: i.productName,
       variant: i.variant,
       qty: i.qty,
@@ -989,6 +998,28 @@ window.placeOrder = async function() {
       createdAt: serverTimestamp()
     });
     lastOrderId = docRef.id;
+
+    // Deduct stock for each ordered variant
+    try {
+      const batch = writeBatch(db);
+      for (const item of Object.values(cart)) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
+        const variant = (product.variants || [])[item.variantIdx];
+        if (!variant || variant.stock === undefined || variant.stock === null || variant.stock === '') continue;
+        const updatedVariants = product.variants.map((v, idx) => {
+          if (idx === item.variantIdx) {
+            return { ...v, stock: Math.max(0, Number(v.stock) - item.qty) };
+          }
+          return v;
+        });
+        batch.update(doc(db, 'users', OWNER_UID, 'products', product.id), { variants: updatedVariants });
+      }
+      await batch.commit();
+    } catch(stockErr) {
+      console.error('Stock deduction failed:', stockErr);
+    }
+
     cart = {};
     updateCartBadge();
     // Update confirmed screen with order ID
