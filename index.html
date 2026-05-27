@@ -303,8 +303,8 @@
           <input class="form-input" id="co-name" placeholder="Your name" />
         </div>
         <div class="form-group" style="margin-bottom:0;">
-          <div class="form-label"><i class="ti ti-mail"></i> Email</div>
-          <input class="form-input" id="co-phone" placeholder="Email address" readonly style="background:var(--cream-dark);color:var(--text-3);" />
+          <div class="form-label"><i class="ti ti-phone"></i> Phone Number</div>
+          <input class="form-input" id="co-phone" placeholder="e.g. 98765 43210" type="tel" inputmode="numeric" />
         </div>
       </div>
       <div class="section-card">
@@ -567,11 +567,15 @@ async function loadData() {
 
   // Orders — fetch all orders and filter client-side by UID (avoids composite index requirement)
   const oRef = collection(db, 'users', OWNER_UID, 'orders');
-  const oQ = query(oRef, orderBy('createdAt', 'desc'));
-  unsubOrders = onSnapshot(oQ, snap => {
+  unsubOrders = onSnapshot(oRef, snap => {
     orders = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(o => o.customerId === currentUser.uid);
+      .filter(o => o.customerId === currentUser.uid)
+      .sort((a, b) => {
+        const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
+        const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
+        return tb - ta;
+      });
     if (document.getElementById('screen-orders').classList.contains('active')) renderOrders();
   });
 }
@@ -703,7 +707,7 @@ function productCardHTML(p) {
         <div class="vp-qty">
           <button class="vp-btn" onclick="changeQty('${p.id}',${vi},-1)">−</button>
           <span class="vp-val">${qty}</span>
-          <button class="vp-btn" onclick="changeQty('${p.id}',${vi},1)" ${atMax ? 'disabled style="opacity:.4;"' : ''}>+</button>
+          <button class="vp-btn" onclick="changeQty('${p.id}',${vi},1)" style="${atMax ? 'opacity:.4;' : ''}">+</button>
         </div>
       </div>`;
     }
@@ -716,7 +720,12 @@ function productCardHTML(p) {
 
   return `<div class="product-card">
     <div class="product-card-top">
-      <div class="product-icon" style="font-size:28px;">${productEmoji(p.category||'Other')}</div>
+      <div class="product-icon" style="font-size:28px;${p.imageBase64 ? 'padding:0;overflow:hidden;' : ''}">
+        ${p.imageBase64
+          ? `<img src="${p.imageBase64}" style="width:56px;height:56px;object-fit:cover;border-radius:var(--radius-sm);" />`
+          : productEmoji(p.category||'Other')
+        }
+      </div>
       <div class="product-info">
         <div class="product-name">${p.name||'Unnamed'}</div>
         <div class="product-cat">${p.category||'Other'}</div>
@@ -741,8 +750,8 @@ window.changeQty = function(productId, variantIdx, delta) {
   const newQty = current + delta;
   if (newQty <= 0) {
     delete cart[key];
-  } else if (newQty > stock) {
-    showToast(`Only ${stock} in stock`);
+  } else if (delta > 0 && current >= stock) {
+    showToast(`Only ${stock} in stock — can't add more`);
     return;
   } else {
     cart[key] = {
@@ -823,9 +832,9 @@ window.setFulfillment = function(mode) {
 
 window.goToCheckout = function goToCheckout() {
   if (!cartCount()) { showToast('Your cart is empty'); return; }
-  // Pre-fill name and phone from Google profile
+  // Pre-fill name from Google profile; phone must be entered by user
   document.getElementById('co-name').value = currentUser?.displayName || '';
-  // phone is left for user to fill in (Google doesn't provide it)
+  document.getElementById('co-phone').value = '';
   // Order summary
   const items = Object.values(cart);
   document.getElementById('co-order-summary').innerHTML = items.map(i =>
@@ -843,6 +852,7 @@ window.placeOrder = async function() {
   const notes = document.getElementById('co-notes').value.trim();
   if (!name) { showToast('Please enter your name'); return; }
   if (!phone) { showToast('Please enter your phone number'); return; }
+  if (!/^\d{10}$/.test(phone.replace(/\s/g,''))) { showToast('Enter a valid 10-digit phone number'); return; }
   if (fulfillmentMode === 'delivery' && !address) { showToast('Please enter a delivery address'); return; }
 
   const btn = document.querySelector('#screen-checkout .primary-btn:last-of-type');
