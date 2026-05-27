@@ -183,6 +183,28 @@
   .status-label{font-size:10px;color:var(--text-3);margin-top:4px;font-weight:500;}
   .status-label.done,.status-label.active{color:var(--green);}
 
+  /* ── PDP ── */
+  .pdp-hero{width:100%;aspect-ratio:4/3;background:var(--cream-dark);position:relative;overflow:hidden;flex-shrink:0;}
+  .pdp-hero img{width:100%;height:100%;object-fit:cover;}
+  .pdp-hero-emoji{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;}
+  .pdp-body{padding:16px 16px 0;}
+  .pdp-category{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+  .pdp-name{font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:8px;}
+  .pdp-notes{font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:16px;}
+  .pdp-section-title{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+  .pdp-variants{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+  .pdp-variant-row{background:var(--white);border-radius:var(--radius-sm);border:1.5px solid var(--border-light);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .pdp-variant-row.oos{opacity:.45;}
+  .pdp-variant-info{flex:1;}
+  .pdp-variant-label{font-size:15px;font-weight:600;color:var(--text);}
+  .pdp-variant-price{font-size:14px;font-weight:700;color:var(--green);margin-top:2px;}
+  .pdp-variant-stock{font-size:11px;margin-top:3px;}
+  .pdp-add-btn{height:38px;min-width:38px;border-radius:var(--radius-xs);background:var(--green);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0 10px;}
+  .pdp-add-btn i{font-size:18px;color:white;}
+  .pdp-qty-ctrl{display:flex;align-items:center;border:1.5px solid var(--green);border-radius:var(--radius-xs);overflow:hidden;background:var(--white);flex-shrink:0;}
+  .pdp-qty-btn{width:34px;height:36px;border:none;background:none;font-size:18px;font-weight:700;color:var(--green);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .pdp-qty-val{min-width:28px;text-align:center;font-size:14px;font-weight:700;color:var(--green);}
+
   /* ── TOAST ── */
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:white;padding:10px 20px;border-radius:30px;font-size:13px;opacity:0;transition:all 0.3s;z-index:9999;white-space:nowrap;pointer-events:none;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -339,10 +361,11 @@
   <div class="screen" id="screen-confirmed">
     <div class="confirmed-icon"><i class="ti ti-circle-check"></i></div>
     <div class="confirmed-title">Order Placed! 🎉</div>
+    <div id="confirmed-order-id" style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:8px;"></div>
     <div class="confirmed-sub">We've received your order and will confirm it soon.<br>You can track its status in <strong>My Orders</strong>.</div>
     <div class="confirmed-actions">
       <button class="primary-btn" onclick="navTo('orders')"><i class="ti ti-receipt"></i> View My Orders</button>
-      <button class="secondary-btn" onclick="navTo('shop')"><i class="ti ti-arrow-left"></i> Keep Shopping</button>
+      <button class="secondary-btn" onclick="navTo('shop')"><i class="ti ti-basket"></i> Keep Shopping</button>
     </div>
   </div>
 
@@ -362,6 +385,15 @@
       <span class="back-bar-title">Order Details</span>
     </div>
     <div class="scroll-area padded" id="order-detail-content" style="padding-top:4px;"></div>
+  </div>
+
+  <!-- PRODUCT DETAIL PAGE -->
+  <div class="screen" id="screen-pdp">
+    <div class="back-bar" style="padding-bottom:8px;">
+      <button class="back-btn" onclick="goBack()"><i class="ti ti-arrow-left"></i></button>
+      <span class="back-bar-title" id="pdp-title"></span>
+    </div>
+    <div class="scroll-area" style="padding-bottom:110px;" id="pdp-content"></div>
   </div>
 
   <!-- BOTTOM NAV -->
@@ -388,7 +420,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, query, orderBy, onSnapshot, serverTimestamp
@@ -420,12 +452,13 @@ let currentUser = null;
 let products = [];
 let cart = {}; // { "productId_variantIndex": { productName, variant, qty, price } }
 let orders = [];
+let lastOrderId = null;
 let unsubProducts = null;
 let unsubOrders = null;
 let screenStack = ['login'];
 let selectedCategory = 'All';
 
-const SCREENS = ['loading','login','home','shop','cart','checkout','confirmed','orders','order-detail'];
+const SCREENS = ['loading','login','home','shop','cart','checkout','confirmed','orders','order-detail','pdp'];
 
 // ─────────────────────────────────────────────────────────
 // UTILS
@@ -505,13 +538,23 @@ window.goTo = function(id) {
 // ─────────────────────────────────────────────────────────
 const googleProvider = new GoogleAuthProvider();
 
+// Detect mobile (popup is blocked on mobile browsers)
+function isMobile() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
 window.signInWithGoogle = async function() {
   const btn = document.getElementById('google-signin-btn');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;border-top-color:var(--green);"></div> Signing in…';
   try {
-    await signInWithPopup(auth, googleProvider);
-    // onAuthStateChanged will handle navigation
+    if (isMobile()) {
+      // Redirect method — works on all mobile browsers incl. Safari iOS
+      await signInWithRedirect(auth, googleProvider);
+      // Page will reload; onAuthStateChanged handles the rest
+    } else {
+      await signInWithPopup(auth, googleProvider);
+    }
   } catch(e) {
     console.error(e);
     if (e.code !== 'auth/popup-closed-by-user') {
@@ -543,6 +586,13 @@ onAuthStateChanged(auth, async (user) => {
     await loadData();
     navTo('home');
   } else {
+    // Check for redirect result (mobile Google sign-in returns here)
+    try {
+      const result = await getRedirectResult(auth);
+      if (result?.user) return; // onAuthStateChanged will fire again with the user
+    } catch(e) {
+      console.error('Redirect result error:', e);
+    }
     currentUser = null;
     if (unsubProducts) { unsubProducts(); unsubProducts = null; }
     if (unsubOrders) { unsubOrders(); unsubOrders = null; }
@@ -681,6 +731,62 @@ function filterAndRenderProducts() {
 
 window.renderShop = renderShop;
 
+// ─────────────────────────────────────────────────────────
+// PRODUCT DETAIL PAGE
+// ─────────────────────────────────────────────────────────
+window.openPDP = function(productId) {
+  const p = products.find(x => x.id === productId);
+  if (!p) return;
+  document.getElementById('pdp-title').textContent = p.name || 'Product';
+  const variants = p.variants || [];
+  const variantsHTML = variants.map((v, vi) => {
+    const key = `${p.id}_${vi}`;
+    const cartItem = cart[key];
+    const stock = (v.stock !== undefined && v.stock !== '') ? Number(v.stock) : Infinity;
+    const oos = stock <= 0;
+    const qty = cartItem ? cartItem.qty : 0;
+    const atMax = qty >= stock;
+    const label = v.name || v.label || 'Standard';
+    let stockBadge = '';
+    if (oos) stockBadge = `<span class="pdp-variant-stock" style="color:var(--red);">Out of stock</span>`;
+    else if (stock !== Infinity && stock <= 5) stockBadge = `<span class="pdp-variant-stock" style="color:var(--gold);">Only ${stock} left</span>`;
+    else if (stock !== Infinity) stockBadge = `<span class="pdp-variant-stock" style="color:var(--green);">In stock (${stock})</span>`;
+    const ctrl = oos
+      ? `<span style="font-size:11px;color:var(--text-3);font-style:italic;">OOS</span>`
+      : qty > 0
+        ? `<div class="pdp-qty-ctrl">
+            <button class="pdp-qty-btn" onclick="changeQty('${p.id}',${vi},-1);openPDP('${p.id}')">−</button>
+            <span class="pdp-qty-val">${qty}</span>
+            <button class="pdp-qty-btn" onclick="changeQty('${p.id}',${vi},1);openPDP('${p.id}')" style="${atMax?'opacity:.4;':''}">+</button>
+          </div>`
+        : `<button class="pdp-add-btn" onclick="changeQty('${p.id}',${vi},1);openPDP('${p.id}')"><i class="ti ti-plus"></i></button>`;
+    return `<div class="pdp-variant-row${oos?' oos':''}">
+      <div class="pdp-variant-info">
+        <div class="pdp-variant-label">${label}</div>
+        <div class="pdp-variant-price">₹${Number(v.price||0).toFixed(2)}</div>
+        ${stockBadge}
+      </div>
+      ${ctrl}
+    </div>`;
+  }).join('');
+
+  const heroHTML = p.imageBase64
+    ? `<img src="${p.imageBase64}" alt="${p.name}" />`
+    : `<div class="pdp-hero-emoji">${productEmoji(p.category||'Other')}</div>`;
+
+  document.getElementById('pdp-content').innerHTML = `
+    <div class="pdp-hero">${heroHTML}</div>
+    <div class="pdp-body">
+      <div class="pdp-category">${p.category||'Other'}</div>
+      <div class="pdp-name">${p.name||'Unnamed'}</div>
+      ${p.notes ? `<div class="pdp-notes">${p.notes}</div>` : ''}
+      <div class="pdp-section-title">Choose a size</div>
+      <div class="pdp-variants">${variantsHTML}</div>
+    </div>
+  `;
+  goTo('pdp');
+};
+
 function productCardHTML(p) {
   const variants = p.variants || [];
   const variantsHTML = variants.map((v, vi) => {
@@ -719,7 +825,7 @@ function productCardHTML(p) {
   }).join('');
 
   return `<div class="product-card">
-    <div class="product-card-top">
+    <div class="product-card-top" onclick="openPDP('${p.id}')" style="cursor:pointer;">
       <div class="product-icon" style="font-size:28px;${p.imageBase64 ? 'padding:0;overflow:hidden;' : ''}">
         ${p.imageBase64
           ? `<img src="${p.imageBase64}" style="width:56px;height:56px;object-fit:cover;border-radius:var(--radius-sm);" />`
@@ -727,7 +833,7 @@ function productCardHTML(p) {
         }
       </div>
       <div class="product-info">
-        <div class="product-name">${p.name||'Unnamed'}</div>
+        <div class="product-name">${p.name||'Unnamed'} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-3);vertical-align:middle;"></i></div>
         <div class="product-cat">${p.category||'Other'}</div>
         ${p.notes ? `<div class="product-notes">${p.notes}</div>` : ''}
       </div>
@@ -765,6 +871,8 @@ window.changeQty = function(productId, variantIdx, delta) {
   updateCartBadge();
   if (document.getElementById('screen-home').classList.contains('active')) renderHome();
   if (document.getElementById('screen-shop').classList.contains('active')) filterAndRenderProducts();
+  // Refresh PDP in-place if it's open (qty buttons update without navigating away)
+  if (document.getElementById('screen-pdp').classList.contains('active')) openPDP(productId);
 };
 
 window.removeCartItem = function(key) {
@@ -866,7 +974,7 @@ window.placeOrder = async function() {
       price: i.price
     }));
     const subtotal = cartTotal();
-    await addDoc(collection(db, 'users', OWNER_UID, 'orders'), {
+    const docRef = await addDoc(collection(db, 'users', OWNER_UID, 'orders'), {
       customerName: name,
       customerPhone: phone,
       customerEmail: currentUser.email || '',
@@ -880,8 +988,12 @@ window.placeOrder = async function() {
       status: 'pending',
       createdAt: serverTimestamp()
     });
+    lastOrderId = docRef.id;
     cart = {};
     updateCartBadge();
+    // Update confirmed screen with order ID
+    const shortId = lastOrderId.slice(-6).toUpperCase();
+    document.getElementById('confirmed-order-id').textContent = `Order #${shortId}`;
     navTo('confirmed');
   } catch(e) {
     console.error(e);
