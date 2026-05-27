@@ -423,7 +423,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, query, orderBy, onSnapshot, serverTimestamp
+  getFirestore, collection, doc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ─────────────────────────────────────────────────────────
@@ -615,12 +615,12 @@ async function loadData() {
     if (document.getElementById('screen-shop').classList.contains('active')) renderShop();
   });
 
-  // Orders — fetch all orders and filter client-side by UID
+  // Orders — query only this customer's orders using where clause
   const oRef = collection(db, 'users', OWNER_UID, 'orders');
-  unsubOrders = onSnapshot(oRef, snap => {
+  const oQ = query(oRef, where('customerId', '==', currentUser.uid));
+  unsubOrders = onSnapshot(oQ, snap => {
     orders = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(o => o.customerId === currentUser.uid)
       .sort((a, b) => {
         const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
         const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
@@ -629,13 +629,11 @@ async function loadData() {
     if (document.getElementById('screen-orders').classList.contains('active')) renderOrders();
   }, err => {
     console.error('Orders listener error:', err.code, err.message);
-    // Most likely cause: Firestore rules blocking customer reads
-    // Show a helpful message in the orders tab
     const el = document.getElementById('orders-list');
     if (el) {
       el.innerHTML = `<div class="empty-state" style="padding:24px 16px;">
         <i class="ti ti-lock" style="font-size:36px;color:var(--text-3);"></i>
-        <p style="margin-top:12px;font-size:14px;color:var(--text-2);">Couldn't load orders.<br><span style="font-size:12px;color:var(--text-3);">Error: ${err.code}</span></p>
+        <p style="margin-top:12px;font-size:14px;color:var(--text-2);">Couldn't load orders.<br><span style="font-size:12px;color:var(--text-3);">${err.code}</span></p>
       </div>`;
     }
   });
