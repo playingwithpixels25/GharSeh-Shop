@@ -108,6 +108,12 @@
   .vp-btn:active{background:var(--green-light);}
   .vp-val{min-width:20px;text-align:center;font-size:12px;font-weight:700;color:var(--green);}
 
+  /* ── QTY CONTROL (cart) ── */
+  .qty-control{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:var(--radius-xs);overflow:hidden;background:var(--white);}
+  .qty-btn{width:30px;height:30px;border:none;background:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--green);font-weight:700;flex-shrink:0;}
+  .qty-btn:active{background:var(--green-light);}
+  .qty-val{width:28px;text-align:center;font-size:14px;font-weight:600;color:var(--text);}
+
   /* ── CART FAB ── */
   .cart-fab{position:absolute;bottom:72px;left:16px;right:16px;z-index:200;background:var(--green);color:#fff;border:none;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 4px 20px rgba(45,90,39,0.4);transition:transform .15s;}
   .cart-fab:active{transform:scale(0.98);}
@@ -819,7 +825,7 @@ window.goToCheckout = function goToCheckout() {
   if (!cartCount()) { showToast('Your cart is empty'); return; }
   // Pre-fill name and phone from Google profile
   document.getElementById('co-name').value = currentUser?.displayName || '';
-  document.getElementById('co-phone').value = currentUser?.email || '';
+  // phone is left for user to fill in (Google doesn't provide it)
   // Order summary
   const items = Object.values(cart);
   document.getElementById('co-order-summary').innerHTML = items.map(i =>
@@ -836,6 +842,7 @@ window.placeOrder = async function() {
   const address = document.getElementById('co-address').value.trim();
   const notes = document.getElementById('co-notes').value.trim();
   if (!name) { showToast('Please enter your name'); return; }
+  if (!phone) { showToast('Please enter your phone number'); return; }
   if (fulfillmentMode === 'delivery' && !address) { showToast('Please enter a delivery address'); return; }
 
   const btn = document.querySelector('#screen-checkout .primary-btn:last-of-type');
@@ -851,7 +858,8 @@ window.placeOrder = async function() {
     const subtotal = cartTotal();
     await addDoc(collection(db, 'users', OWNER_UID, 'orders'), {
       customerName: name,
-      customerEmail: phone,
+      customerPhone: phone,
+      customerEmail: currentUser.email || '',
       customerId: currentUser.uid,
       items,
       subtotal,
