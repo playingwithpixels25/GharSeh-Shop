@@ -345,6 +345,13 @@
         <textarea class="form-textarea" id="co-notes" rows="2" placeholder="Any special requests or instructions…"></textarea>
       </div>
       <div class="section-card">
+        <div class="section-title"><i class="ti ti-wallet" style="color:var(--gold);"></i> Payment</div>
+        <div class="toggle-row" style="margin-bottom:0;">
+          <button class="toggle-btn active" id="pay-mode-upi" onclick="setPaymentMode('upi')"><i class="ti ti-qrcode"></i> UPI</button>
+          <button class="toggle-btn" id="pay-mode-cash" onclick="setPaymentMode('cash')"><i class="ti ti-cash"></i> Cash</button>
+        </div>
+      </div>
+      <div class="section-card">
         <div class="section-title">Order Summary</div>
         <div id="co-order-summary"></div>
         <div class="divider"></div>
@@ -939,6 +946,13 @@ window.changeQtyInCart = function(key, delta) {
 // CHECKOUT
 // ─────────────────────────────────────────────────────────
 let fulfillmentMode = 'pickup';
+let paymentMode = 'upi';
+
+window.setPaymentMode = function(mode) {
+  paymentMode = mode;
+  document.getElementById('pay-mode-upi').classList.toggle('active', mode === 'upi');
+  document.getElementById('pay-mode-cash').classList.toggle('active', mode === 'cash');
+};
 
 window.setFulfillment = function(mode) {
   fulfillmentMode = mode;
@@ -949,9 +963,12 @@ window.setFulfillment = function(mode) {
 
 window.goToCheckout = function goToCheckout() {
   if (!cartCount()) { showToast('Your cart is empty'); return; }
-  // Pre-fill name from Google profile; phone must be entered by user
   document.getElementById('co-name').value = currentUser?.displayName || '';
   document.getElementById('co-phone').value = '';
+  // Reset payment mode
+  paymentMode = 'upi';
+  document.getElementById('pay-mode-upi').classList.add('active');
+  document.getElementById('pay-mode-cash').classList.remove('active');
   // Order summary
   const items = Object.values(cart);
   document.getElementById('co-order-summary').innerHTML = items.map(i =>
@@ -995,6 +1012,7 @@ window.placeOrder = async function() {
       address: fulfillmentMode === 'delivery' ? address : '',
       notes,
       status: 'pending',
+      paymentMode,
       createdAt: serverTimestamp()
     });
     lastOrderId = docRef.id;
@@ -1078,7 +1096,7 @@ window.viewOrderDetail = function(id) {
     <div class="section-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div>
-          <div style="font-size:13px;color:var(--text-3);">Order #${order.id.slice(-6).toUpperCase()}</div>
+          <div style="font-size:13px;color:var(--text-3);">Order ${order.orderNo ? order.orderNo : '#' + order.id.slice(-6).toUpperCase()}</div>
           <div style="font-size:12px;color:var(--text-3);">${formatDate(order.createdAt)} · ${formatTime(order.createdAt)}</div>
         </div>
         ${statusChip(order.status)}
@@ -1104,6 +1122,10 @@ window.viewOrderDetail = function(id) {
         ${order.fulfillment==='delivery'?'Home Delivery':'Pickup'}
       </div>
       ${order.address ? `<div style="font-size:13px;color:var(--text-2);margin-top:6px;padding-left:26px;">${order.address}</div>` : ''}
+      ${order.paymentMode ? `<div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-2);margin-top:10px;">
+        <i class="ti ti-${order.paymentMode==='upi'?'qrcode':'cash'}" style="color:var(--green);font-size:18px;"></i>
+        Payment: ${order.paymentMode.toUpperCase()}
+      </div>` : ''}
       ${order.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:8px;padding:8px 10px;background:var(--cream);border-radius:var(--radius-xs);"><i class="ti ti-notes" style="margin-right:4px;"></i>${order.notes}</div>` : ''}
     </div>
   `;
